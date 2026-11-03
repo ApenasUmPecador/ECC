@@ -1,3 +1,17 @@
+> ## Fork Notice — OpenCode V2 (`2.0.32+`) Compatibility Port
+>
+> This repository is a fork of [`affaan-m/everything-claude-code`](https://github.com/affaan-m/ECC) (`ECC`) that fixes and ports the OpenCode plugin integration ([`.opencode/`](.opencode/)) to work natively on **OpenCode V2 (`2.0.32+`)**.
+>
+> ### Summary of What Was Fixed & Changed
+> - **Fixed OpenCode V2 plugin load failure:** Upstream ECC 2.2.3 targets the legacy OpenCode V1 plugin loader (`@opencode-ai/plugin` SDK, `tools/` file auto-discovery, and `"plugin": ["./plugins"]` in `opencode.json`), which fails to load on OpenCode V2.
+> - **V2 Plugin Adapter & V1 Bridge ([`.opencode/plugins/`](.opencode/plugins/) & [`.opencode/plugins-v1/`](.opencode/plugins-v1/)):** Preserves the original V1 hook implementation in quarantine and exposes a single zero-dependency V2 entrypoint (`ecc.hooks` in `.opencode/plugins/index.ts`) that bridges all 5 V2 hook domains (`tool.execute.before/after`, `shell.create.before`, `permission.evaluate`, `session.context`/`compaction`, and `event.subscribe` with a bounded 2-second cleanup drain) into a synthetic V1 context.
+> - **Ported all 8 custom tools to V2 ([`.opencode/plugins/lib/tools/`](.opencode/plugins/lib/tools/)):** `changed-files`, `check-coverage`, `dependency-analyzer`, `format-code`, `git-summary`, `lint-check`, `run-tests`, and `security-audit` are now registered via `ctx.tool.transform` without requiring `@opencode-ai/plugin`.
+> - **Added a 60-test verification suite ([`.opencode/plugins/lib/tests/`](.opencode/plugins/lib/tests/)):** Runs directly with Node 22+ built-in test runner (`cd .opencode && node --experimental-strip-types --test plugins/lib/tests/*.test.ts`).
+> - **All ECC skills, commands, agents, prompts, and instructions remain unchanged.**
+>
+> For full technical details, architecture, and verification records, see [`.opencode/README.md`](.opencode/README.md) and the [OpenCode V2 Port Design Spec](.opencode/docs/specs/2026-10-30-opencode-v2-port-design.md).
+
+---
 <p align="center">
   <img src="assets/hero.png" alt="ECC - the agent harness operating system" width="100%" />
 </p>
