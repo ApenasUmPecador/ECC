@@ -1,9 +1,39 @@
-# OpenCode ECC Plugin
+# OpenCode ECC Plugin (OpenCode V2 Port — 2.0.32+)
 
 > WARNING: This README is specific to OpenCode usage.
 > If you installed ECC via npm (e.g. `npm install opencode-ecc`), refer to the root README instead.
 
-ECC plugin for OpenCode - agents, commands, hooks, and skills.
+ECC plugin for OpenCode — agents, commands, hooks, and skills — ported to **OpenCode V2 (`2.0.32+`)** with zero external plugin SDK dependencies.
+
+## OpenCode V2 Port Overview (What Changed)
+
+Upstream ECC 2.2.3 targets the legacy OpenCode V1 plugin loader (`@opencode-ai/plugin` + `tools/` auto-discovery + `"plugin": ["./plugins"]`), which fails to load on OpenCode V2 (`2.0.32+`).
+
+This port brings the entire ECC OpenCode plugin surface to **OpenCode V2** while keeping all ECC skills, commands, agents, prompts, and instructions unchanged:
+
+- **Single V2 Entrypoint (`plugins/index.ts`):** Exports `{ id: "ecc.hooks", setup(ctx) }`. OpenCode V2 automatically discovers `plugins/index.ts`; the legacy `"plugin": ["./plugins"]` entry in `opencode.json` has been removed.
+- **V1 Quarantine & Synthetic Bridge (`plugins-v1/` + `plugins/lib/bridge.ts`):**
+  - The original V1 hook implementation is preserved in `plugins-v1/ecc-hooks.original.ts` (pristine) and `plugins-v1/ecc-hooks.ts` (adapted to remove the broken `@opencode-ai/plugin` import).
+  - `plugins/lib/bridge.ts` invokes the V1 hooks with a synthetic V1 context (`$`, `directory`, `worktree`, `client.app.log`) and strips V1's `tool` map non-mutatingly.
+- **5 V2 Hook Domains (`plugins/lib/hooks.ts`, `plugins/lib/events.ts`, `plugins/lib/mapping.ts`):**
+  - `tool.execute.before` / `tool.execute.after` (with `callID` parity across `write`, `edit`, and `patch` `add`/`update`/`delete`/`move`, plus `file.edited` auto-formatting and `console.log` checks).
+  - `shell.create.before` (injects `ECC_PLUGIN=true` and `PROJECT_ROOT`).
+  - `permission.evaluate` (auto-approves `read` and single safe formatter/test `shell` commands; never approves compound shell commands or overrides `deny`).
+  - `session.context` (triggers `session.created` once per session) and `session.compaction` (appends ECC context blocks).
+  - `event.subscribe` (`session.execution.succeeded` + `session.idle` with 2-second dedupe, `filesystem.changed`, `session.deleted`, and best-effort `session.moved` debug logging).
+  - **Bounded Cleanup:** On plugin unload, `cleanup()` aborts the event loop and awaits `drainEventLoop` with a 2-second timeout before disposing registrations.
+- **8 Custom Tools Ported to V2 (`plugins/lib/tools/*`):**
+  - Registered via `ctx.tool.transform` with `options: { codemode: false }` (replay-safe, no guard that would drop tools on registry rebuild):
+  - `changed-files`, `check-coverage`, `dependency-analyzer`, `format-code`, `git-summary`, `lint-check`, `run-tests`, `security-audit`.
+- **60 Automated Tests (`plugins/lib/tests/*.test.ts`):**
+  - Run with Node 22+ built-in test runner and type stripping (no build step or extra npm packages required):
+    ```bash
+    cd .opencode && node --experimental-strip-types --test plugins/lib/tests/*.test.ts
+    ```
+- **Design & Plan Documentation:**
+  - Full specification: [`.opencode/docs/specs/2026-10-30-opencode-v2-port-design.md`](docs/specs/2026-10-30-opencode-v2-port-design.md)
+  - Implementation plan: [`.opencode/docs/plans/2026-10-30-opencode-v2-port.md`](docs/plans/2026-10-30-opencode-v2-port.md)
+  - Quarantine & E2E verification notes: [`.opencode/plugins-v1/README.md`](plugins-v1/README.md)
 
 ## Installation
 
